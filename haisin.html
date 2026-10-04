@@ -58,7 +58,9 @@
   #bar .cv input { width: 64px; background: #0e1217; border: 1px solid var(--line); border-radius: 6px; padding: 5px 6px; }
   #audio { display: none; flex: 1 0 100%; width: min(440px, 88vw); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
   #audio.show { display: block; }
-  #audio input[type=text] { width: 100%; background: #0e1217; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+  #audio .urlrow { display: flex; gap: 6px; }
+  #audio .urlrow button { flex: none; }
+  #audio input[type=text] { flex: 1; min-width: 0; width: 100%; background: #0e1217; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
   #audio .arow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 8px; }
   #audio .arow label { display: flex; align-items: center; gap: 5px; color: var(--dim); }
   #audio .arow input[type=range] { width: 110px; }
@@ -119,7 +121,7 @@
   <button id="bReset">初期化</button>
   <button id="bHelp">？</button>
   <div id="audio">
-    <input id="yUrl" type="text" placeholder="YouTubeのURL（動画・ライブ・再生リスト）" spellcheck="false">
+    <div class="urlrow"><input id="yUrl" type="text" placeholder="YouTubeのURL（動画・ライブ・再生リスト）" spellcheck="false"><button id="yPaste" title="クリップボードのURLを貼り付けます">📋 貼り付け</button></div>
     <div class="arow">
       <button id="yPlay" class="primary">▶ 再生</button>
       <button id="yPause">⏸ 一時停止</button>
@@ -501,6 +503,16 @@
       if (yLoop.checked && !/list=/.test(yUrl.value)) { pl.seekTo(0); pl.playVideo(); } else { yStatus("再生が終わりました"); $("bAudio").classList.remove("on"); }
     }
   }
+  $("yPaste").onclick = function () {
+    function fill(txt) {
+      txt = (txt || "").trim(); if (!txt) { yStatus("クリップボードが空です。"); return; }
+      yUrl.value = txt; auSave(); yUrl.focus(); yUrl.select();
+      yStatus(parseYt(txt) ? "貼り付けました。「▶ 再生」で開始します。" : "貼り付けましたが、YouTubeのURLとして読み取れません。");
+    }
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(fill, function () { yUrl.focus(); yUrl.select(); yStatus("貼り付けを許可できませんでした。入力欄で Ctrl＋V を押してください。"); });
+    } else { yUrl.focus(); yUrl.select(); yStatus("このブラウザでは自動で貼り付けられません。入力欄で Ctrl＋V を押してください。"); }
+  };
   $("yPlay").onclick = yPlay;
   yUrl.addEventListener("keydown", function (e) { if (e.key === "Enter") yPlay(); e.stopPropagation(); });
   $("yPause").onclick = function () {
