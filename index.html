@@ -1,0 +1,187 @@
+<html lang="ja"><head>
+<meta charset="utf-8">
+<title>セクション見出し</title>
+<style>
+  /* ============================================================
+     DESIGN
+     ink        #f2f5fa   main text
+     dim        #93b0c6   secondary text
+     hair       rgba(255,255,255,.15)
+     band       rgba(11,17,24,.82)
+     type       band = 'Zen Kaku Gothic New' 900
+
+     top    title band pinned to the very top of the canvas
+     bottom scrolling message band pinned to the very bottom
+     background shared with the lower-third pair
+     ============================================================ */
+  :root {
+    --ink: #f2f5fa;
+    --dim: #93b0c6;
+    --band: rgba(11, 17, 24, 0.82);
+    --hair: rgba(255, 255, 255, 0.15);
+    --band-pad-x: 2.2vw;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+  body {
+    font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN',
+                 'Yu Gothic', 'Meiryo', sans-serif;
+    color: var(--ink);
+  }
+
+  .top-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2vw;
+    padding: 1.15vh var(--band-pad-x);
+    background: var(--band);
+    border-bottom: 1px solid var(--hair);
+    animation: drop 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .title {
+    font-size: 3.4vh;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+    text-shadow: 0 0.2vh 0.4vh rgba(0, 0, 0, 0.45);
+  }
+  .clock {
+    font-size: 2.6vh;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--dim);
+  }
+
+  .ticker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: stretch;
+    height: 6.6vh;
+    background: var(--band);
+    border-top: 1px solid var(--hair);
+    overflow: hidden;
+    animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+  }
+  .ticker-track {
+    display: flex;
+    flex: none;
+    align-items: center;
+    margin-left: var(--band-pad-x);
+  }
+  .ticker-track > span {
+    display: block;
+    flex: none;
+    padding: 0 3.2vw;
+    font-size: 4.2vh;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    /* DESIGN — looping animation: seamless leftward marquee */
+    animation: marquee var(--marquee-dur, 30s) linear infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-100%); }
+  }
+  @keyframes drop {
+    from { opacity: 0; transform: translateY(-100%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (orientation: portrait) {
+    .title { font-size: 3.6vh; letter-spacing: 0.1em; }
+    .clock { font-size: 2.8vh; }
+    .ticker { height: 6vh; }
+    .ticker-track { margin-left: 4vw; }
+    .ticker-track > span { font-size: 3.6vh; padding: 0 6vw; }
+  }
+</style>
+</head>
+<body>
+  <header class="top-band">
+    <span class="title">TEB防災</span>
+    <span class="clock" id="clock">14:10:55</span>
+  </header>
+
+  <div class="ticker" id="ticker"><div class="ticker-track"><span style="--marquee-dur: 44.9s;">□札幌  ☁️→☔ くもりのち雨［明日］　　　□仙台  ☁️→☔ くもりのち雨［明日］　　　□東京  ☁️→☔ くもりのち雨［明日］　　　□名古屋 ☁️→☔ くもりのち雨［明日］　　　□金沢  ☁️→☔ くもりのち雨［明日］　　　□大阪  ☁️→☔ くもりのち雨［明日］　　　□広島  ☔→☁️ 雨のちくもり［明日］　　　□福岡  ☁️→☀️ くもりのち晴れ［明日］　　　□那覇  ☀️→☁️ 晴れのちくもり［明日］　　　</span></div><div class="ticker-track" aria-hidden="true"><span style="--marquee-dur: 44.9s;">□札幌  ☁️→☔ くもりのち雨［明日］　　　□仙台  ☁️→☔ くもりのち雨［明日］　　　□東京  ☁️→☔ くもりのち雨［明日］　　　□名古屋 ☁️→☔ くもりのち雨［明日］　　　□金沢  ☁️→☔ くもりのち雨［明日］　　　□大阪  ☁️→☔ くもりのち雨［明日］　　　□広島  ☔→☁️ 雨のちくもり［明日］　　　□福岡  ☁️→☀️ くもりのち晴れ［明日］　　　□那覇  ☀️→☁️ 晴れのちくもり［明日］　　　</span></div></div>
+
+  <script>
+    (function () {
+      /* ---- clock: never changes except for the time itself ---- */
+      var clock = document.getElementById('clock');
+      function tick() {
+        var d = new Date();
+        var p = function (n) { return String(n).padStart(2, '0'); };
+        clock.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      }
+      tick();
+      setInterval(tick, 1000);
+
+      /* ===== ここを書き換えると下の帯の流れる内容が変わります =====
+         1行 = 1つの表示。行を増減すればそのまま反映されます。 */
+      var LINES = [
+        '□札幌  ☁️→☔ くもりのち雨［明日］',
+        '□仙台  ☁️→☔ くもりのち雨［明日］',
+        '□東京  ☁️→☔ くもりのち雨［明日］',
+        '□名古屋 ☁️→☔ くもりのち雨［明日］',
+        '□金沢  ☁️→☔ くもりのち雨［明日］',
+        '□大阪  ☁️→☔ くもりのち雨［明日］',
+        '□広島  ☔→☁️ 雨のちくもり［明日］',
+        '□福岡  ☁️→☀️ くもりのち晴れ［明日］',
+        '□那覇  ☀️→☁️ 晴れのちくもり［明日］'
+      ];
+      /* 各行のあいだに入る区切り */
+      var SEPARATOR = '　　　';
+
+      var ticker = document.getElementById('ticker');
+
+      function buildTrack(copy) {
+        var track = document.createElement('div');
+        track.className = 'ticker-track';
+        if (copy) { track.setAttribute('aria-hidden', 'true'); }
+        var span = document.createElement('span');
+        span.textContent = LINES.join(SEPARATOR) + SEPARATOR;
+        track.appendChild(span);
+        return track;
+      }
+
+      // track 1 sits in normal flow; its clone rides track 1's right
+      // edge. Both run the same keyframes, so the seam never shows.
+      var first = buildTrack(false);
+      ticker.appendChild(first);
+      ticker.appendChild(buildTrack(true));
+
+      requestAnimationFrame(function () {
+        var width = first.offsetWidth;
+        var duration = Math.max(16, width / 150); // ~150px per second
+        first.querySelector('span').style.setProperty('--marquee-dur', duration + 's');
+        ticker.lastElementChild.querySelector('span').style.setProperty(
+          '--marquee-dur', duration + 's'
+        );
+      });
+    })();
+  </script>
+
+
+</body></html>
