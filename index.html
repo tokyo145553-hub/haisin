@@ -126,7 +126,9 @@ function load(){var r=null;try{r=JSON.parse(localStorage.getItem(KEY))}catch(e){
 var S=load(),seen={},peers=[],ID=Math.random().toString(36).slice(2),bc=null;
 /* 同期：BroadcastChannel ＋ localStorage ＋ window.postMessage（開き元／子ウィンドウ）の3経路。どれか1つ通れば反映される */
 try{bc=new BroadcastChannel("teb-mv")}catch(e){}
-function ping(t,x){var m={teb:1,n:ID+Math.random(),t:t};if(t==="state")m.state=S;if(x)for(var k in x)m[k]=x[k];if(bc)try{bc.postMessage(m)}catch(e){}var ws=peers.slice();if(window.opener)ws.push(window.opener);ws.forEach(function(w){try{w.postMessage(m,"*")}catch(e){}})}
+var net=/^https?:$/.test(location.protocol),netOn=false;
+function send(m){if(net)try{fetch("/msg",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(m)}).catch(function(){})}catch(e){}}
+function ping(t,x){var m={teb:1,n:ID+Math.random(),t:t};seen[m.n]=1;send(m);if(t==="state")m.state=S;if(x)for(var k in x)m[k]=x[k];if(bc)try{bc.postMessage(m)}catch(e){}var ws=peers.slice();if(window.opener)ws.push(window.opener);ws.forEach(function(w){try{w.postMessage(m,"*")}catch(e){}})}
 function commit(){S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}ping("state")}
 function incoming(r){if(r&&r.ts>S.ts){try{localStorage.setItem(KEY,JSON.stringify(r))}catch(e){}remote(r)}}
 function recv(m){if(!m||!m.teb||seen[m.n])return;seen[m.n]=1;if(m.t==="state")incoming(norm(m.state));else if(m.t==="hello")ping("state");else if(window.onCmd)onCmd(m)}
@@ -134,6 +136,9 @@ if(bc)bc.onmessage=function(e){recv(e.data)};
 addEventListener("message",function(e){recv(e.data)});
 addEventListener("storage",function(e){if(e.key===KEY&&e.newValue){try{incoming(norm(JSON.parse(e.newValue)))}catch(x){}}});
 setTimeout(function(){ping("hello")},400);
+/* 別ブラウザ・別PC間の同期：server.js / server.py を起動して http://localhost:8765/ で開いたときに有効（SSE）*/
+if(net&&window.EventSource){var es=new EventSource("/events");es.onopen=function(){netOn=true};es.onerror=function(){netOn=false};es.onmessage=function(e){try{recv(JSON.parse(e.data))}catch(x){}};
+fetch("/state").then(function(r){return r.json()}).then(function(s){if(s&&s.state)incoming(norm(s.state))}).catch(function(){})}
 
 /* ===== 配信ページ ===== */
 var stage=$("stage"),ov=$("ov"),body=document.body,scale=1,els={},selId=null,cropState=null,tkSig="";
