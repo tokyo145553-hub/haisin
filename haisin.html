@@ -70,6 +70,16 @@ main{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:1
 #st{padding:3px 10px;border-radius:99px;background:#3a1d22;color:#ffb4bd;font-size:12px}#st.ok{background:#173424;color:#8be3ac}
 #audio{display:block!important;width:auto;flex:none;margin:0;padding:0;border:0}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:6000;background:var(--chrome);border:1px solid var(--line);border-radius:8px;padding:8px 14px;display:none}
+html,body{font-size:17px}
+h1{font-size:20px}h3{font-size:18px}
+button,.btn{font-size:16px;padding:10px 16px}
+main{grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:16px;padding:16px}
+.card{padding:16px}.f{font-size:15px;margin-top:10px}
+.f input[type=text],.f input[type=number],.f textarea,#audio input[type=text]{padding:9px 11px;font-size:16px}
+.f textarea{font-size:15px}.f input[type=color]{height:40px}.c{font-size:16px;margin-top:12px}
+.c input{width:20px;height:20px}.hint,.warn{font-size:14px}
+#audio,#audio *{font-size:15px}#audio button{padding:8px 12px}#audio select{padding:8px}
+#st,#ns{font-size:14px}#ns{padding:3px 10px;border-radius:99px;background:#2a2f38;color:#9fb0c4}#ns.ok{background:#173424;color:#8be3ac}
 </style>
 </head>
 <body>
@@ -77,7 +87,7 @@ main{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:1
   <h1>TEB 防災マルチビュー ― 設定</h1>
   <a id="aBc" class="btn pri" href="index.html" target="_blank" rel="opener">📺 配信ページを開く</a>
   <button id="bEdit" title="配信ページの上で枠をドラッグして動かす・大きさを変える（配信ページで E キーでも可）">✎ 枠を配信ページ上で動かす</button>
-  <span id="st">配信ページ：未接続</span><span style="flex:1"></span>
+  <button id="zm" title="この設定ページの文字の大きさ">文字サイズ</button><span id="st">配信ページ：未接続</span><span id="ns">同期サーバー：なし</span><span style="flex:1"></span>
   <button id="bIo">レイアウト</button><button id="bReset">初期化</button><button id="bHelp">？</button>
 </header>
 <main id="app"></main>
@@ -85,6 +95,7 @@ main{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:1
 <div id="ytBox" aria-hidden="true"><div id="ytHost"></div></div>
 <dialog id="dlgIo"><h3>レイアウトの書き出し・読み込み</h3><p>下の文字列が、いまの配置・デザイン・テロップのすべてです。別の端末へ移すときは、コピーして貼り付けてください。</p><textarea id="ioText" spellcheck="false"></textarea><div class="row"><button id="ioCopy">コピー</button><button id="ioLoad" class="primary">この内容を読み込む</button><button id="ioClose">閉じる</button></div></dialog>
 <dialog id="dlgHelp"><h3>使い方</h3><ul>
+<li><b>別のブラウザ・別PCでも反映したいとき</b>：同梱の <code>server.js</code>（Node.js：<code>node server.js</code>）か <code>server.py</code>（Python：<code>python server.py</code>）を起動し、両方のページを <code>http://localhost:8765/</code>（設定は <code>/control.html</code>）で開きます。右上に「同期サーバー：接続中」と出れば有効です。サーバーなしでも、同じブラウザ内なら従来どおり連動します。</li>
 <li><b>2つのページ</b>：<code>index.html</code>＝配信ページ（OBSなどに映す画面）、<code>control.html</code>＝この設定ページ。同じブラウザで両方を開いておくと、ここでの変更が配信ページへ即座に反映されます（同じフォルダに置いてください）。</li>
 <li><b>ポップアップがブロックされるとき</b>：「📺 配信ページを開く」はリンクなので、ブロックされると自動で新しいタブとして開きます。それでも開けない場合は、URLをコピーして新しいウィンドウのアドレス欄に貼り付けてください。配信ページは単独で開いても動きます。</li>
 <li><b>映像と重ならない</b>：左の縦帯・上の帯・見出し・下のテロップがある場所を除いた範囲（配信ページの編集中に点線で表示）にだけ地図を置きます。表示を切り替えて枠がはみ出したら「領域に合わせて再配置」を押してください。</li>
@@ -111,7 +122,9 @@ function load(){var r=null;try{r=JSON.parse(localStorage.getItem(KEY))}catch(e){
 var S=load(),seen={},peers=[],ID=Math.random().toString(36).slice(2),bc=null;
 /* 同期：BroadcastChannel ＋ localStorage ＋ window.postMessage（開き元／子ウィンドウ）の3経路。どれか1つ通れば反映される */
 try{bc=new BroadcastChannel("teb-mv")}catch(e){}
-function ping(t,x){var m={teb:1,n:ID+Math.random(),t:t};if(t==="state")m.state=S;if(x)for(var k in x)m[k]=x[k];if(bc)try{bc.postMessage(m)}catch(e){}var ws=peers.slice();if(window.opener)ws.push(window.opener);ws.forEach(function(w){try{w.postMessage(m,"*")}catch(e){}})}
+var net=/^https?:$/.test(location.protocol),netOn=false;
+function send(m){if(net)try{fetch("/msg",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(m)}).catch(function(){})}catch(e){}}
+function ping(t,x){var m={teb:1,n:ID+Math.random(),t:t};seen[m.n]=1;send(m);if(t==="state")m.state=S;if(x)for(var k in x)m[k]=x[k];if(bc)try{bc.postMessage(m)}catch(e){}var ws=peers.slice();if(window.opener)ws.push(window.opener);ws.forEach(function(w){try{w.postMessage(m,"*")}catch(e){}})}
 function commit(){S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}ping("state")}
 function incoming(r){if(r&&r.ts>S.ts){try{localStorage.setItem(KEY,JSON.stringify(r))}catch(e){}remote(r)}}
 function recv(m){if(!m||!m.teb||seen[m.n])return;seen[m.n]=1;if(m.t==="state")incoming(norm(m.state));else if(m.t==="hello")ping("state");else if(window.onCmd)onCmd(m)}
@@ -119,6 +132,9 @@ if(bc)bc.onmessage=function(e){recv(e.data)};
 addEventListener("message",function(e){recv(e.data)});
 addEventListener("storage",function(e){if(e.key===KEY&&e.newValue){try{incoming(norm(JSON.parse(e.newValue)))}catch(x){}}});
 setTimeout(function(){ping("hello")},400);
+/* 別ブラウザ・別PC間の同期：server.js / server.py を起動して http://localhost:8765/ で開いたときに有効（SSE）*/
+if(net&&window.EventSource){var es=new EventSource("/events");es.onopen=function(){netOn=true};es.onerror=function(){netOn=false};es.onmessage=function(e){try{recv(JSON.parse(e.data))}catch(x){}};
+fetch("/state").then(function(r){return r.json()}).then(function(s){if(s&&s.state)incoming(norm(s.state))}).catch(function(){})}
 
 /* ===== 設定ページ ===== */
 function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){t.style.display="none"},2800)}
@@ -154,6 +170,8 @@ document.addEventListener("click",function(e){var b=e.target.closest&&e.target.c
   else if(a==="front"){p.z=Math.max.apply(null,S.panels.map(function(q){return q.z}))+1;commit()}});
 function remote(r){S.ts=r.ts;S.canvas=r.canvas;S.d=r.d;S.lock=r.lock;S.panels=r.panels;fill()}
 var lastBeat=0;window.onCmd=function(m){if(m.t==="beat")lastBeat=Date.now()};
+var zs=Number(localStorage.getItem("teb-zoom"))||1;document.body.style.zoom=zs;$("zm").onclick=function(){zs=zs>=1.6?0.9:Math.round((zs+0.15)*100)/100;document.body.style.zoom=zs;try{localStorage.setItem("teb-zoom",zs)}catch(e){}toast("文字サイズ "+Math.round(zs*100)+"%")};
+setInterval(function(){var n=$("ns");n.textContent=netOn?"同期サーバー：接続中 ●":"同期サーバー：なし";n.className=netOn?"ok":""},1000);
 setInterval(function(){var ok=Date.now()-lastBeat<5000,e=$("st");e.textContent=ok?"配信ページ：接続中 ●":"配信ページ：未接続";e.className=ok?"ok":""},1000);
 $("bcUrl").value=new URL("index.html",location.href).href;
 $("bCopy").onclick=function(){$("bcUrl").select();try{navigator.clipboard.writeText($("bcUrl").value)}catch(e){document.execCommand("copy")}toast("URLをコピーしました")};
